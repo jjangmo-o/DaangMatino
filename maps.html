@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Road Network Analysis with Maintenance Optimization</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css">
+</head>
+<body>
+    <div id="map-container">
+        <div id="map"></div>
+        <div class="info-panel">
+            <div class="control-buttons">
+                <button onclick="enableAddStreet()" class="btn add-btn" id="addStreetBtn">
+                    <i class="fas fa-road"></i> Add Street
+                </button>
+                <button onclick="enableRemoveStreet()" class="btn remove-btn" id="removeStreetBtn">
+                    <i class="fas fa-trash"></i> Remove
+                </button>
+                <button onclick="completeNetwork()" class="btn complete-btn" id="completeBtn">
+                    <i class="fas fa-project-diagram"></i> Complete Network
+                </button>
+                <button onclick="optimizeMaintenance()" class="btn optimize-btn" id="optimizeBtn">
+                    <i class="fas fa-cogs"></i> Optimize Maintenance
+                </button>
+            </div>
+            <div class="search-controls">
+                <input type="text" id="streetSearch" class="search-input" placeholder="Search for a street...">
+                <div style="display: flex; gap: 5px; margin-top: 5px;">
+                    <button onclick="performSearch()" class="btn search-btn">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                    <button onclick="clearHighlight()" class="btn clear-btn">
+                        <i class="fas fa-times"></i> Clear
+                    </button>
+                </div>
+            </div>
+            <div id="measurement" class="measurement-info">
+                Draw a line to measure distance
+            </div>
+            <div class="routes-list" id="routesList">
+                <div style="padding: 10px; text-align: center; color: #666;">
+                    No streets added yet. Draw a street to begin.
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="graph-container">
+        <div class="panel-header">
+            <h1>Road Network Analysis</h1>
+            <p>Visualize and optimize your street network</p>
+        </div>
+        
+        <div class="graph-panel">
+            <div class="graph-header">
+                <h2><i class="fas fa-network-wired"></i> Street Network Graph</h2>
+            </div>
+            
+            <div id="graph">
+                <div style="text-align: center; padding-top: 120px; color: #aaa;">
+                    <i class="fas fa-project-diagram" style="font-size: 48px; margin-bottom: 15px;"></i><br>
+                    Complete the network to visualize the graph
+                </div>
+            </div>
+            
+            <div class="edge-form" id="edgeForm">
+                <h3>Edit Street Information</h3>
+                <div class="form-group">
+                    <label for="streetName">Street Name</label>
+                    <input type="text" id="streetName">
+                </div>
+                <div class="form-group">
+                    <label for="damageLevel">Damage Level</label>
+                    <select id="damageLevel">
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="responseTime">Response Time (hours)</label>
+                    <input type="number" id="responseTime" min="1" max="72">
+                </div>
+                <div class="form-buttons">
+                    <button class="save-btn" onclick="saveEdgeInfo()">Save</button>
+                    <button class="cancel-btn" onclick="closeEdgeForm()">Cancel</button>
+                </div>
+            </div>
+            
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color node"></div>
+                    <span>Node</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color merged"></div>
+                    <span>Merged Node</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color optimized"></div>
+                    <span>Optimized Route</span>
+                </div>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="nodeCount">0</div>
+                    <div class="stat-label">Total Nodes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="edgeCount">0</div>
+                    <div class="stat-label">Connections</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="mergedCount">0</div>
+                    <div class="stat-label">Merged Nodes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="streetCount">0</div>
+                    <div class="stat-label">Streets</div>
+                </div>
+            </div>
+            
+            <div class="graph-controls">
+                <button class="graph-btn" onclick="arrangeGraph('force')">
+                    <i class="fas fa-sync"></i> Force Layout
+                </button>
+                <button class="graph-btn" onclick="arrangeGraph('circle')">
+                    <i class="fas fa-circle"></i> Circle Layout
+                </button>
+            </div>
+        </div>
+        
+        <div class="optimization-results" id="optimizationResults">
+            <h3><i class="fas fa-star"></i> Maintenance Priority</h3>
+            <div class="priority-list" id="priorityList">
+                <div class="priority-item">Complete optimization to see prioritized roads</div>
+            </div>
+            <div class="optimization-stats">
+                <div class="optimization-stat">
+                    <div class="optimization-value" id="totalDamage">0</div>
+                    <div class="optimization-label">Total Damage Score</div>
+                </div>
+                <div class="optimization-stat">
+                    <div class="optimization-value" id="daysRequired">0</div>
+                    <div class="optimization-label">Days Required</div>
+                </div>
+                <div class="optimization-stat">
+                    <div class="optimization-value" id="roadsOptimized">0</div>
+                    <div class="optimization-label">Roads Prioritized</div>
+                </div>
+                <div class="optimization-stat">
+                    <div class="optimization-value" id="capacityUsed">0%</div>
+                    <div class="optimization-label">Capacity Used</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="tutorial">
+            <h3><i class="fas fa-info-circle"></i> How to Use</h3>
+            <ol>
+                <li>Click "Add Street" and draw lines on the map</li>
+                <li>Name each street and set damage level/response time</li>
+                <li>Add at least 2 streets to enable network completion</li>
+                <li>Click "Complete Network" to visualize the graph</li>
+                <li>Click "Optimize Maintenance" to prioritize road repairs</li>
+                <li>Click on any edge to edit street information</li>
+            </ol>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="maps.js"></script>
+</body>
+</html>

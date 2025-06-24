@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Road Network Analysis with Algorithm Implementation</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+        }
+
+        #map-container {
+            flex: 3;
+            height: 100%;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        #map {
+            height: 100%;
+            z-index: 1;
+        }
+
+        #graph-container {
+            flex: 1;
+            min-width: 400px;
+            background: linear-gradient(135deg, #2c3e50, #1a2a6c);
+            color: white;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: -5px 0 15px rgba(0, 0, 0, 0.4);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            text-align: center;
+            padding: 15px 0;
+            margin-bottom: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            border-bottom: 3px solid #4A90E2;
+        }
+
+        .panel-header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+            color: #FFD700;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+
+        .info-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            min-width: 320px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .control-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            font-size: 12px;
+        }
+
+        .add-btn { background: linear-gradient(to bottom, #28a745, #1e7e34); color: white; }
+        .remove-btn { background: linear-gradient(to bottom, #ffc107, #e0a800); color: #212529; }
+        .complete-btn { background: linear-gradient(to bottom, #6f42c1, #563d7c); color: white; }
+        .optimize-btn { background: linear-gradient(to bottom, #9c27b0, #7b1fa2); color: white; }
+        .dijkstra-btn { background: linear-gradient(to bottom, #17a2b8, #138496); color: white; }
+        .sort-btn { background: linear-gradient(to bottom, #fd7e14, #e8610e); color: white; }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .path-controls {
+            margin: 15px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #17a2b8;
+        }
+
+        .path-controls h4 {
+            color: #17a2b8;
+            margin-bottom: 10px;
+        }
+
+        .path-input {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .path-input select {
+            flex: 1;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .measurement-info {
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-size: 14px;
+            border-left: 4px solid #4A90E2;
+        }
+
+        .routes-list {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+            padding: 5px;
+        }
+
+        .route-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: #f0f8ff;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid #4A90E2;
+        }
+
+        .route-item:hover {
+            background: #e1f0ff;
+            transform: translateX(5px);
+        }
+
+        .graph-panel {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #graph {
+            flex-grow: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            min-height: 250px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .graph-node {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #4A90E2;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid #1a2a6c;
+            z-index: 10;
+        }
+
+        .graph-node.start-node {
+            background: #28a745;
+            border-color: #1e7e34;
+        }
+
+        .graph-node.end-node {
+            background: #dc3545;
+            border-color: #c82333;
+        }
+
+        .graph-node.path-node {
+            background: #ffc107;
+            border-color: #e0a800;
+            color: #212529;
+        }
+
+        .graph-edge {
+            position: absolute;
+            height: 3px;
+            background: #4A90E2;
+            transform-origin: 0 0;
+            z-index: 5;
+            cursor: pointer;
+        }
+
+        .graph-edge.shortest-path {
+            background: #28a745;
+            height: 5px;
+            z-index: 8;
+        }
+
+        .graph-edge.optimized-edge {
+            background: #9c27b0;
+            height: 5px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #FFD700;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #ccc;
+        }
+
+        .algorithm-results {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .algorithm-results h4 {
+            color: #FFD700;
+            margin-bottom: 10px;
+        }
+
+        .result-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .priority-list {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .priority-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(156, 39, 176, 0.2);
+            border-radius: 4px;
+            font-size: 12px;
+            border-left: 3px solid #9c27b0;
+        }
+
+        .priority-item.high { border-left-color: #ff5252; }
+        .priority-item.medium { border-left-color: #ff9800; }
+        .priority-item.low { border-left-color: #4caf50; }
+
+        .edge-form {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            z-index: 100;
+            width: 300px;
+            display: none;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .form-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .form-buttons button {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .save-btn { background: #28a745; color: white; }
+        .cancel-btn { background: #dc3545; color: white; }
+    </style>
+</head>
+<body>
+    <div id="map-container">
+        <div id="map"></div>
+        <div class="info-panel">
+            <div class="control-buttons">
+                <button onclick="enableAddStreet()" class="btn add-btn" id="addStreetBtn">
+                    <i class="fas fa-road"></i> Add Street
+                </button>
+                <button onclick="enableRemoveStreet()" class="btn remove-btn" id="removeStreetBtn">
+                    <i class="fas fa-trash"></i> Remove
+                </button>
+                <button onclick="completeNetwork()" class="btn complete-btn" id="completeBtn">
+                    <i class="fas fa-project-diagram"></i> Complete Network
+                </button>
+                <button onclick="optimizeMaintenance()" class="btn optimize-btn" id="optimizeBtn">
+                    <i class="fas fa-cogs"></i> Knapsack Optimize
+                </button>
+                <button onclick="showDijkstraControls()" class="btn dijkstra-btn" id="dijkstraBtn">
+                    <i class="fas fa-route"></i> Dijkstra Path
+                </button>
+                <button onclick="quickSortStreets()" class="btn sort-btn" id="sortBtn">
+                    <i class="fas fa-sort"></i> QuickSort Streets
+                </button>
+            </div>
+            
+            <div class="path-controls" id="pathControls" style="display: none;">
+                <h4><i class="fas fa-route"></i> Shortest Path (Dijkstra)</h4>
+                <div class="path-input">
+                    <select id="startNode">
+                        <option value="">Start Node</option>
+                    </select>
+                    <select id="endNode">
+                        <option value="">End Node</option>
+                    </select>
+                </div>
+                <button onclick="findShortestPath()" class="btn dijkstra-btn" style="width: 100%;">
+                    Find Shortest Path
+                </button>
+            </div>
+
+            <div class="search-controls">
+                <input type="text" id="streetSearch" class="search-input" placeholder="Search for a street...">
+                <div style="display: flex; gap: 5px;">
+                    <button onclick="performSearch()" class="btn" style="background: #007bff; color: white; flex: 1;">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                    <button onclick="clearHighlight()" class="btn" style="background: #dc3545; color: white; flex: 1;">
+                        <i class="fas fa-times"></i> Clear
+                    </button>
+                </div>
+            </div>
+
+            <div id="measurement" class="measurement-info">
+                Draw a line to measure distance
+            </div>
+
+            <div class="routes-list" id="routesList">
+                <div style="padding: 10px; text-align: center; color: #666;">
+                    No streets added yet. Draw a street to begin.
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="graph-container">
+        <div class="panel-header">
+            <h1>Road Network Analysis</h1>
+            <p>Dijkstra • QuickSort • Knapsack Algorithm Implementation</p>
+        </div>
+        
+        <div class="graph-panel">
+            <div id="graph">
+                <div style="text-align: center; padding-top: 100px; color: #aaa;">
+                    <i class="fas fa-project-diagram" style="font-size: 48px; margin-bottom: 15px;"></i><br>
+                    Complete the network to visualize the graph
+                </div>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="nodeCount">0</div>
+                    <div class="stat-label">Total Nodes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="edgeCount">0</div>
+                    <div class="stat-label">Connections</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="streetCount">0</div>
+                    <div class="stat-label">Streets</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalDistance">0</div>
+                    <div class="stat-label">Total Distance (km)</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="algorithm-results" id="dijkstraResults" style="display: none;">
+            <h4><i class="fas fa-route"></i> Dijkstra's Algorithm Results</h4>
+            <div id="pathInfo"></div>
+            <div id="pathList"></div>
+        </div>
+        
+        <div class="algorithm-results" id="sortResults" style="display: none;">
+            <h4><i class="fas fa-sort"></i> QuickSort Results</h4>
+            <div id="sortInfo"></div>
+            <div id="sortedList"></div>
+        </div>
+        
+        <div class="algorithm-results" id="knapsackResults" style="display: none;">
+            <h4><i class="fas fa-cogs"></i> Knapsack Optimization Results</h4>
+            <div id="knapsackInfo"></div>
+            <div class="priority-list" id="priorityList"></div>
+        </div>
+    </div>
+
+    <div class="edge-form" id="edgeForm">
+        <h3>Edit Street Information</h3>
+        <div class="form-group">
+            <label for="streetName">Street Name</label>
+            <input type="text" id="streetName">
+        </div>
+        <div class="form-group">
+            <label for="damageLevel">Damage Level</label>
+            <select id="damageLevel">
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="responseTime">Response Time (hours)</label>
+            <input type="number" id="responseTime" min="1" max="72" value="24">
+        </div>
+        <div class="form-buttons">
+            <button class="save-btn" onclick="saveEdgeInfo()">Save</button>
+            <button class="cancel-btn" onclick="closeEdgeForm()">Cancel</button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script>
+        // Global variables
+        const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        let drawCount = 0;
+        let isNetworkCompleted = false;
+        let currentMode = "normal";
+        let routesData = [];
+        let graphNodes = new Map();
+        let adjacencyList = new Map();
+        let nodePositions = {};
+        let currentEdge = null;
+        let shortestPath = [];
+        let sortedRoutes = [];
+
+        // Leaflet map setup
+        const map = L.map('map', { minZoom: 3, maxZoom: 20 }).setView([14.604, 120.979], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 20
+        }).addTo(map);
+
+        const drawnItems = new L.FeatureGroup().addTo(map);
+        const endpointMarkers = new L.FeatureGroup().addTo(map);
+        const highlightLayer = new L.FeatureGroup().addTo(map);
+        const pathLayer = new L.FeatureGroup().addTo(map);
+
+        // QUICKSORT ALGORITHM IMPLEMENTATION
+        function quickSort(arr, low = 0, high = arr.length - 1, compareFn, steps = []) {
+            if (low < high) {
+                const pi = partition(arr, low, high, compareFn, steps);
+                quickSort(arr, low, pi - 1, compareFn, steps);
+                quickSort(arr, pi + 1, high, compareFn, steps);
+            }
+            return { sorted: arr, steps: steps };
+        }
+
+        function partition(arr, low, high, compareFn, steps) {
+            const pivot = arr[high];
+            let i = low - 1;
+
+            steps.push({
+                action: `Partitioning with pivot: ${pivot.name} (${pivot.distance.toFixed(3)} km)`,
+                array: [...arr],
+                pivotIndex: high,
+                lowIndex: low,
+                highIndex: high
+            });
+
+            for (let j = low; j < high; j++) {
+                if (compareFn(arr[j], pivot) <= 0) {
+                    i++;
+                    [arr[i], arr[j]] = [arr[j], arr[i]];
+                    steps.push({
+                        action: `Swapped ${arr[i].name} with ${arr[j].name}`,
+                        array: [...arr],
+                        swapped: [i, j]
+                    });
+                }
+            }
+            [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];
+            steps.push({
+                action: `Placed pivot ${pivot.name} at position ${i + 1}`,
+                array: [...arr],
+                pivotFinal: i + 1
+            });
+            return i + 1;
+        }
+
+        // DIJKSTRA'S ALGORITHM IMPLEMENTATION
+        function dijkstra(graph, start, end) {
+            const distances = new Map();
+            const previous = new Map();
+            const visited = new Set();
+            const queue = [];
+
+            // Initialize distances and queue
+            for (let node of graph.keys()) {
+                distances.set(node, node === start ? 0 : Infinity);
+                queue.push(node);
+            }
+
+            const steps = [];
+            steps.push({ action: `Starting Dijkstra from ${start} to ${end}`, distances: new Map(distances) });
+
+            while (queue.length > 0) {
+                // Find minimum distance node
+                let current = queue.reduce((min, node) => 
+                    distances.get(node) < distances.get(min) ? node : min
+                );
+
+                queue.splice(queue.indexOf(current), 1);
+                visited.add(current);
+
+                if (current === end) break;
+
+                steps.push({ 
+                    action: `Visiting node ${current} (distance: ${distances.get(current)})`,
+                    current: current,
+                    distances: new Map(distances)
+                });
+
+                // Update distances to neighbors
+                const neighbors = graph.get(current) || [];
+                for (let neighbor of neighbors) {
+                    if (!visited.has(neighbor.node)) {
+                        const newDistance = distances.get(current) + neighbor.weight;
+                        if (newDistance < distances.get(neighbor.node)) {
+                            distances.set(neighbor.node, newDistance);
+                            previous.set(neighbor.node, current);
+                            steps.push({
+                                action: `Updated distance to ${neighbor.node}: ${newDistance.toFixed(3)}`,
+                                updated: neighbor.node,
+                                distances: new Map(distances)
+                            });
+                        }
+                    }
+                }
+            }
+
+            // Reconstruct path
+            const path = [];
+            let current = end;
+            while (current !== undefined) {
+                path.unshift(current);
+                current = previous.get(current);
+            }
+
+            return {
+                distance: distances.get(end),
+                path: distances.get(end) === Infinity ? [] : path,
+                steps: steps,
+                allDistances: distances
+            };
+        }
+
+        // KNAPSACK ALGORITHM IMPLEMENTATION
+        function knapSack(capacity, items) {
+            const n = items.length;
+            const dp = Array(n + 1).fill(null).map(() => Array(capacity + 1).fill(0));
+            const steps = [];
+
+            steps.push({
+                action: `Starting Knapsack with capacity: ${capacity} days`,
+                items: items.map(item => `${item.name} (damage: ${item.damageScore}, days: ${item.responseDays.toFixed(1)})`)
+            });
+
+            // Build DP table
+            for (let i = 1; i <= n; i++) {
+                const item = items[i - 1];
+                const weight = Math.ceil(item.responseDays);
+                const value = item.damageScore;
+
+                for (let w = 0; w <= capacity; w++) {
+                    if (weight <= w) {
+                        dp[i][w] = Math.max(dp[i - 1][w], dp[i - 1][w - weight] + value);
+                    } else {
+                        dp[i][w] = dp[i - 1][w];
+                    }
+                }
+
+                steps.push({
+                    action: `Processed ${item.name}: weight=${weight}, value=${value}`,
+                    currentMax: dp[i][capacity]
+                });
+            }
+
+            // Backtrack to find selected items
+            const selectedItems = [];
+            let totalWeight = 0;
+            let w = capacity;
+            for (let i = n; i > 0 && dp[i][w] > 0; i--) {
+                if (dp[i][w] !== dp[i - 1][w]) {
+                    const item = items[i - 1];
+                    selectedItems.push(item);
+                    totalWeight += Math.ceil(item.responseDays);
+                    w -= Math.ceil(item.responseDays);
+                }
+            }
+
+            return {
+                totalValue: dp[n][capacity],
+                totalWeight: totalWeight,
+                selectedItems: selectedItems.reverse(),
+                steps: steps
+            };
+        }
+
+        // UI FUNCTIONS
+        function enableAddStreet() {
+            currentMode = "add";
+            updateButtonStates();
+            document.getElementById("measurement").innerHTML = 
+                "<strong>ADD MODE:</strong> Draw a line to add a new street";
+            map.getContainer().style.cursor = "crosshair";
+            startDrawing();
+        }
+
+        function enableRemoveStreet() {
+            currentMode = "remove";
+            updateButtonStates();
+            document.getElementById("measurement").innerHTML = 
+                "<strong>REMOVE MODE:</strong> Click a route in the list to remove it";
+            map.getContainer().style.cursor = "pointer";
+        }
+
+        function updateButtonStates() {
+            const buttons = {
+                addStreetBtn: currentMode === "add",
+                removeStreetBtn: currentMode === "remove"
+            };
+            
+            Object.keys(buttons).forEach(id => {
+                const btn = document.getElementById(id);
+                if (buttons[id]) {
+                    btn.style.transform = "scale(0.95)";
+                    btn.style.opacity = "0.8";
+                } else {
+                    btn.style.transform = "scale(1)";
+                    btn.style.opacity = "1";
+                }
+            });
+        }
+
+        function resetMode() {
+            currentMode = "normal";
+            map.getContainer().style.cursor = "";
+            updateButtonStates();
+        }
+
+        function completeNetwork() {
+            if (routesData.length < 2) {
+                alert("You need at least 2 streets to complete a network!");
+                return;
+            }
+
+            endpointMarkers.clearLayers();
+            graphNodes.clear();
+            adjacencyList.clear();
+
+            // Build graph structure
+            routesData.forEach(route => {
+                const [start, end] = route.label.split(" → ");
+                
+                if (!adjacencyList.has(start)) adjacencyList.set(start, []);
+                if (!adjacencyList.has(end)) adjacencyList.set(end, []);
+                
+                adjacencyList.get(start).push({ node: end, weight: route.distance });
+                adjacencyList.get(end).push({ node: start, weight: route.distance });
+            });
+
+            isNetworkCompleted = true;
+            visualizeGraph();
+            updateNodeSelectors();
+            updateRoutesList();
+            updateStats();
+        }
+
+        function visualizeGraph() {
+            clearGraph();
+            
+            const nodes = Array.from(adjacencyList.keys());
+            const graphWidth = document.getElementById('graph').offsetWidth;
+            const graphHeight = document.getElementById('graph').offsetHeight;
+            
+            // Position nodes in circle
+            const centerX = graphWidth / 2;
+            const centerY = graphHeight / 2;
+            const radius = Math.min(graphWidth, graphHeight) * 0.35;
+            
+            nodes.forEach((node, i) => {
+                const angle = (i / nodes.length) * 2 * Math.PI;
+                const x = centerX + radius * Math.cos(angle) - 20;
+                const y = centerY + radius * Math.sin(angle) - 20;
+                nodePositions[node] = { x, y };
+            });
+
+            // Create nodes
+            nodes.forEach(node => {
+                const nodeEl = document.createElement('div');
+                nodeEl.className = 'graph-node';
+                nodeEl.textContent = node;
+                nodeEl.style.left = `${nodePositions[node].x}px`;
+                nodeEl.style.top = `${nodePositions[node].y}px`;
+                nodeEl.dataset.node = node;
+                document.getElementById('graph').appendChild(nodeEl);
+            });
+
+            // Create edges
+            routesData.forEach(route => {
+                const [start, end] = route.label.split(" → ");
+                createEdgeVisualization(start, end, route);
+            });
+        }
+
+        function createEdgeVisualization(start, end, route) {
+            const startPos = nodePositions[start];
+            const endPos = nodePositions[end];
+            
+            if (!startPos || !endPos) return;
+
+            const dx = endPos.x - startPos.x;
+            const dy = endPos.y - startPos.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+            const edge = document.createElement('div');
+            edge.className = 'graph-edge';
+            edge.style.width = `${distance}px`;
+            edge.style.left = `${startPos.x + 20}px`;
+            edge.style.top = `${startPos.y + 20}px`;
+            edge.style.transform = `rotate(${angle}deg)`;
+            edge.dataset.route = JSON.stringify(route);
+            edge.onclick = () => openEdgeForm(route);
+            document.getElementById('graph').appendChild(edge);
+        }
+
+        function clearGraph() {
+            document.getElementById('graph').innerHTML = '';
+        }

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="sample.css">
+</head>
+<body>
+
+    <h2>Road Condition Input</h2>
+
+    <!-- Road Info Inputs -->
+    <input type="text" id="roadName" placeholder="Enter Road Name">
+
+    <!-- National Road Classification Dropdown -->
+    <select id="roadClass">
+    <option value="" disabled selected>Select Road Classification</option>
+    <option value="National">National</option>
+    <option value="Municipal">Municipal</option>
+    <option value="Baranggay">Baranggay</option>
+    <option value="Bypass">Bypass</option>
+    </select>
+
+    <!-- Road Rating Dropdown -->
+    <select id="roadRating">
+    <option value="" disabled selected>Select Road Rating (1–4)</option>
+    <option value="4">4</option>
+    <option value="3">3</option>
+    <option value="2">2</option>
+    <option value="1">1</option>
+    </select>
+
+    <!-- Road Defects Multi-Select Dropdown -->
+    <div class="dropdown" id="defectDropdown">
+    <div class="dropdown-btn" onclick="toggleDropdown()">Select Road Defects</div>
+    <div class="dropdown-content" id="checkboxContainer">
+        <!-- Checkboxes inserted dynamically -->
+    </div>
+    </div>
+
+    <button onclick="submitForm()">Submit</button>
+
+    <div id="output"></div>
+    
+    <script src="sample.js"></script>
+</body>
+</html>
